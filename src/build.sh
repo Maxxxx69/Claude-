@@ -1,9 +1,10 @@
 #!/usr/bin/env bash
 # Baut Präsentation + Handout, prüft sie und rendert Vorschaubilder.
-# Variablen: NODE_PATH (pptxgenjs, sharp, react-icons), SKILLS (Ordner mit pptx/ und docx/), RENDER (Ausgabeordner)
+# Variablen: DEPS (node_modules mit pptxgenjs, sharp, react-icons, docx), SKILLS (Ordner mit pptx/ und docx/), RENDER (Ausgabeordner)
 set -euo pipefail
 cd "$(dirname "$0")/.."
 : "${RENDER:=render}"
+export NODE_PATH="${DEPS:-/tmp/claude-0/-home-user-Claude-/87add1da-efcc-563e-8d8c-16d5d5f0cfee/scratchpad/_deps_NICHT_LOESCHEN/node_modules}:${NODE_PATH:-}"
 export PPTX_SKILL="$SKILLS/pptx"
 node src/build_deck.js
 node src/build_handout.js

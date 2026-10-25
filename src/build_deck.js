@@ -38,6 +38,11 @@ pres.subject = "Referat zu Kunstepochen";
 pres.author = "Referat Kunst";
 pres.theme = { headFontFace: HEAD, bodyFontFace: BODY };
 const C = pres.SchemeColor;
+// Foliennummern mitzählen, damit die Bildnachweise wissen, wo welches Werk erscheint
+let slideNo = 0;
+const _addSlide = pres.addSlide.bind(pres);
+pres.addSlide = (o) => { slideNo++; return _addSlide(o); };
+const USED = [];
 const BG = C.text1, FG = C.background1, PANEL = C.text2, MUTED = C.background2;
 const ACC = C.accent1, COOL = C.accent2, LINE = C.accent3, DEEP = C.accent4, DIM = C.accent5;
 
@@ -130,6 +135,7 @@ function art(slide, id, box, { align = "center", valign = "middle", frame = true
   const meta = imgMeta[id];
   const r = fitRect(box, meta ? meta.ratio : w.ratio, align, valign);
   const label = `${w.kuenstler}, ${w.titel}, ${w.jahr}`;
+  if (!USED.some((u) => u.id === id)) USED.push({ id, slide: slideNo });
   if (meta) {
     slide.addImage({ path: meta.path, x: r.x, y: r.y, w: r.w, h: r.h, altText: label, objectName: "Werk " + id });
   } else {
@@ -319,18 +325,18 @@ async function build() {
     const s = contentSlide("Merkmale", "02 · MERKMALE AM BILDBEISPIEL", B.title);
     const r = art(s, B.werk, { x: MX + 0.1, y: TOP + 0.1, w: 4.4, h: 4.25 }, { align: "left", valign: "top" });
     caption(s, B.werk, MX + 0.1, r.y + r.h + 0.22, 6.0, { details: true });
-    const x = 5.9;
-    s.addText(B.stat, { x, y: TOP, w: 3.2, h: 1.0, fontFace: HEAD, fontSize: 60, bold: true, color: ACC, margin: 0, valign: "top", isTextBox: true });
-    s.addText(B.statLabel, { x, y: TOP + 1.05, w: 3.0, h: 0.8, fontFace: BODY, fontSize: 14, color: MUTED, margin: 0, valign: "top", isTextBox: true });
-    s.addText(B.stat2, { x, y: TOP + 2.2, w: 3.2, h: 1.0, fontFace: HEAD, fontSize: 60, bold: true, color: ACC, margin: 0, valign: "top", isTextBox: true });
-    s.addText(B.stat2Label, { x, y: TOP + 3.25, w: 3.0, h: 0.8, fontFace: BODY, fontSize: 14, color: MUTED, margin: 0, valign: "top", isTextBox: true });
-    const x2 = 9.3, w2 = SW - MX - x2;
+    // Kennzahl oben, darunter 2 × 2 Merkmale
+    const x = 5.75, w = SW - MX - x;
+    s.addText(B.stat, { x, y: TOP, w: 3.9, h: 1.05, fontFace: HEAD, fontSize: 60, bold: true, color: ACC, margin: 0, valign: "top", isTextBox: true });
+    s.addText(B.statLabel, { x: x + 4.0, y: TOP + 0.2, w: w - 4.0, h: 0.8, fontFace: BODY, fontSize: 16, color: MUTED, margin: 0, valign: "top", isTextBox: true });
+    const cw2 = (w - 0.3) / 2, ch = 1.45;
     B.punkte.forEach((p, i) => {
-      const y = TOP + 0.05 + i * 1.2;
+      const cx = x + (i % 2) * (cw2 + 0.3), cy = TOP + 1.45 + Math.floor(i / 2) * (ch + 0.3);
+      s.addShape(pres.shapes.RECTANGLE, { x: cx, y: cy, w: cw2, h: ch, fill: { color: PANEL }, line: { color: PANEL, width: 0 } });
       s.addText([
         { text: p[0], options: { bold: true, color: FG, breakLine: true } },
-        { text: p[1], options: { color: MUTED, fontSize: 13 } },
-      ], { x: x2, y, w: w2, h: 1.1, fontFace: BODY, fontSize: 15, margin: 0, valign: "top", isTextBox: true });
+        { text: p[1], options: { color: MUTED, fontSize: 14 } },
+      ], { x: cx + 0.25, y: cy + 0.2, w: cw2 - 0.5, h: ch - 0.3, fontFace: BODY, fontSize: 16, margin: 0, valign: "top", isTextBox: true, paraSpaceAfter: 3 });
     });
     s.addNotes(B.notes);
   }
@@ -452,7 +458,11 @@ async function build() {
   {
     const Q = T.bildnachweise;
     const s = contentSlide("Fazit & Quellen", "QUELLEN", Q.title);
-    const list = Q.items;
+    const list = USED.map((u) => {
+      const k = WORKS[u.id];
+      return `Folie ${u.slide}: ${k.kuenstler}, ${k.titel}, ${k.jahr}. ${k.sammlung}. Abb.: ${k.quelle}`;
+    });
+    list.push(Q.hinweis);
     const half = Math.ceil(list.length / 2);
     [list.slice(0, half), list.slice(half)].forEach((part, k) => {
       const x = MX + k * (CW / 2 + 0.15), w = CW / 2 - 0.15;
