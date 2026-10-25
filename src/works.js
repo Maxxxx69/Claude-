@@ -21,14 +21,14 @@ module.exports = {
     quelle: "walkerart.org/collections/artworks/big-self-portrait",
   },
   morley_amsterdam: {
-    kuenstler: "Malcolm Morley", titel: "SS Amsterdam in Front of Rotterdam", titel_de: "Die „SS Amsterdam“ vor Rotterdam", jahr: "1966",
+    kuenstler: "Malcolm Morley", titel: "SS Amsterdam in Front of Rotterdam", titel_de: "Die SS Amsterdam vor Rotterdam", jahr: "1966",
     technik: "Acryl auf Leinwand", masse: "ca. 158 × 214 cm", sammlung: "Privatsammlung",
     ratio: 1.36, merkmal: "Werbebild als Vorlage – per Raster Feld für Feld übertragen",
     quelle: "petzel.com/collect/malcolm-morley4",
   },
   gertsch_medici: {
     kuenstler: "Franz Gertsch", titel: "Medici", titel_de: "", jahr: "1971/72",
-    technik: "Dispersion auf ungrundiertem Halbleinen", masse: "400 × 600 cm", sammlung: "Ludwig Forum für Internationale Kunst, Aachen",
+    technik: "Dispersion auf ungrundiertem Halbleinen", masse: "400 × 600 cm", sammlung: "Ludwig Forum Aachen (Dauerleihgabe)",
     ratio: 1.5, merkmal: "4 × 6 m nach einem Schnappschuss – Durchbruch auf der documenta 5",
     quelle: "guide.kunstmuseumbern.ch/en/artwork/12884",
   },
@@ -58,8 +58,8 @@ module.exports = {
     quelle: "guggenheim.org/artwork/artist/charles-bell",
   },
   hanson_supermarket: {
-    kuenstler: "Duane Hanson", titel: "Supermarket Lady", titel_de: "Supermarkt-Kundin", jahr: "1969/70",
-    technik: "Polyesterharz und Glasfaser, bemalt; echte Kleidung und Waren", masse: "lebensgroß", sammlung: "Ludwig Forum für Internationale Kunst, Aachen",
+    kuenstler: "Duane Hanson", titel: "Supermarket Lady", titel_de: "", jahr: "1969/70",
+    technik: "Polyesterharz, bemalt; echte Kleidung und Waren", masse: "lebensgroß", sammlung: "Ludwig Forum Aachen",
     ratio: 0.8, merkmal: "Abguss vom lebenden Modell – echte Kleidung, echte Waren",
     quelle: "ludwigforum.de/en/museum/restoration-workshop/supermarket-lady",
   },

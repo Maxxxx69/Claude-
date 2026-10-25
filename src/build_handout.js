@@ -4,7 +4,7 @@ const fs = require("fs");
 const path = require("path");
 const {
   Document, Packer, Paragraph, TextRun, Table, TableRow, TableCell, WidthType, BorderStyle,
-  ShadingType, AlignmentType, LineRuleType, VerticalAlign, ImageRun, LevelFormat, PageBreak, HeightRule, TableLayoutType,
+  ShadingType, AlignmentType, LineRuleType, VerticalAlign, ImageRun, LevelFormat, HeightRule, TableLayoutType,
 } = require("docx");
 const W = require("./works.js");
 const T = require("./texts.js");
@@ -15,7 +15,7 @@ const IMG_DIR = path.join(ROOT, "bilder");
 const OUT = path.join(ROOT, "Handout_Fotorealismus_Hyperrealismus.docx");
 
 const HEAD = "Georgia", BODY = "Arial";
-const INK = "1A1A1A", MUTED = "5A5A5A", ACC = "B07400", RULE = "BFBFBF";
+const INK = "1A1A1A", MUTED = "555555", ACC = "9A6400", RULE = "BFBFBF";
 const FOTO_BG = "FDF0CC", HYPER_BG = "DDF0F6", ROW_BG = "F3F3F3";
 const MARGIN = 794; // 1,4 cm
 const PAGE_W = 11906, CONTENT_W = PAGE_W - 2 * MARGIN;
@@ -25,11 +25,12 @@ const NOB = { top: none, bottom: none, left: none, right: none, insideHorizontal
 const thin = { style: BorderStyle.SINGLE, size: 4, color: RULE };
 const GRID = { top: thin, bottom: thin, left: none, right: none, insideHorizontal: thin, insideVertical: none };
 
-const run = (text, o = {}) => new TextRun({ text, font: o.font || BODY, size: o.size || 18, bold: o.bold, italics: o.italics, color: o.color || INK });
+const run = (text, o = {}) => new TextRun({ text, font: o.font || BODY, size: o.size || 20, bold: o.bold, italics: o.italics, color: o.color || INK });
 const para = (children, o = {}) => new Paragraph({ children: Array.isArray(children) ? children : [children], spacing: { before: o.before || 0, after: o.after ?? 40, line: o.line || 252, lineRule: LineRuleType.AUTO }, alignment: o.align, numbering: o.numbering, keepNext: o.keepNext });
 
-function heading(num, text) {
+function heading(num, text, { pageBreakBefore = false } = {}) {
   return new Paragraph({
+    pageBreakBefore,
     children: [run(num + "  ", { font: HEAD, size: 24, bold: true, color: ACC }), run(text, { font: HEAD, size: 24, bold: true })],
     spacing: { before: 150, after: 70 },
     keepNext: true,
@@ -91,25 +92,32 @@ function artBlock(id, maxW, maxH) {
   }
   let w = maxW, h = w / ratio;
   if (h > maxH) { h = maxH; w = h * ratio; }
-  if (img) {
-    return [new Paragraph({ alignment: AlignmentType.CENTER, spacing: { after: 60 }, children: [new ImageRun({ type: img.type, data: img.buf, transformation: { width: Math.round(w), height: Math.round(h) }, altText: { title: k.titel, description: `${k.kuenstler}, ${k.titel}, ${k.jahr}`, name: id } })] })];
-  }
-  // Platzhalter als graue Box mit fester Höhe
+  // Feste Bildzone (maxW × maxH), Bild unten bündig – so stehen alle Bildunterschriften auf einer Linie
   const twW = Math.round(w * 15), twH = Math.round(h * 15);
+  const zoneW = Math.round(maxW * 15), zoneH = Math.round(maxH * 15);
+  let inner;
+  if (img) {
+    inner = new Paragraph({ alignment: AlignmentType.CENTER, spacing: { after: 0 }, children: [new ImageRun({ type: img.type, data: img.buf, transformation: { width: Math.round(w), height: Math.round(h) }, altText: { title: k.titel, description: `${k.kuenstler}, ${k.titel}, ${k.jahr}`, name: id } })] });
+  } else {
+    inner = new Table({
+      width: { size: twW, type: WidthType.DXA }, columnWidths: [twW], layout: TableLayoutType.FIXED, alignment: AlignmentType.CENTER,
+      borders: { top: thin, bottom: thin, left: thin, right: thin, insideHorizontal: none, insideVertical: none },
+      rows: [new TableRow({
+        height: { value: twH, rule: HeightRule.EXACT },
+        children: [cell([para(run("Abbildung einfügen", { size: 14, color: MUTED, bold: true }), { align: AlignmentType.CENTER, after: 0 }), para(run(k.titel, { size: 14, color: MUTED, italics: true }), { align: AlignmentType.CENTER, after: 0 })], twW, { fill: "EDEDED", valign: VerticalAlign.CENTER })],
+      })],
+    });
+  }
   return [new Table({
-    width: { size: twW, type: WidthType.DXA }, columnWidths: [twW], layout: TableLayoutType.FIXED, alignment: AlignmentType.CENTER,
-    borders: { top: thin, bottom: thin, left: thin, right: thin, insideHorizontal: none, insideVertical: none },
-    rows: [new TableRow({
-      height: { value: twH, rule: HeightRule.EXACT },
-      children: [cell([para(run("Abbildung einfügen", { size: 14, color: MUTED, bold: true }), { align: AlignmentType.CENTER, after: 0 }), para(run(k.titel, { size: 14, color: MUTED, italics: true }), { align: AlignmentType.CENTER, after: 0 })], twW, { fill: "EDEDED", valign: VerticalAlign.CENTER })],
-    })],
-  }), para(run(""), { after: 40 })];
+    width: { size: zoneW, type: WidthType.DXA }, columnWidths: [zoneW], layout: TableLayoutType.FIXED, borders: NOB,
+    rows: [new TableRow({ height: { value: zoneH, rule: HeightRule.EXACT }, children: [cell(inner, zoneW, { valign: VerticalAlign.BOTTOM, ml: 0, mr: 0, mt: 0, mb: 0 })] })],
+  }), para(run(""), { after: 60, line: 120 })];
 }
 
 function bullets(items, ref = "bullets") {
   return items.map((it) => new Paragraph({
     numbering: { reference: ref, level: 0 },
-    spacing: { after: 30, line: 247 },
+    spacing: { after: 30, line: 256, lineRule: LineRuleType.AUTO },
     children: Array.isArray(it) ? it : [run(it)],
   }));
 }
@@ -124,8 +132,8 @@ function build() {
       para(run("Fotorealismus & Hyperrealismus", { font: HEAD, size: 34, bold: true }), { after: 0, line: 240 }),
     ], Math.round(CONTENT_W * 0.7), { ml: 0 }),
     cell([
-      para(run("Name: ___________________", { size: 16, color: MUTED }), { after: 50, align: AlignmentType.RIGHT }),
-      para(run("Kurs: ____________  Datum: __________", { size: 16, color: MUTED }), { after: 0, align: AlignmentType.RIGHT }),
+      para(run(`Referat von ${T.meta.name}`, { size: 17, color: MUTED }), { after: 40, align: AlignmentType.RIGHT }),
+      para(run(`${T.meta.kurs} · ${T.meta.datum}`, { size: 17, color: MUTED }), { after: 0, align: AlignmentType.RIGHT }),
     ], Math.round(CONTENT_W * 0.3), { mr: 0, valign: VerticalAlign.BOTTOM }),
   ] })], NOB));
   children.push(para(run(H.leitfrage, { size: 18, italics: true, color: MUTED }), { before: 60, after: 0 }));
@@ -140,7 +148,7 @@ function build() {
     cell(para(run(H.zeitLang[i] || it.text), { after: 0 }), tw[1], { fill: i % 2 ? undefined : ROW_BG, mt: 25, mb: 25 }),
   ] }))));
 
-  children.push(para(run("Entwicklung: vom Fotorealismus zum Hyperrealismus", { bold: true }), { before: 110, after: 50, keepNext: true }));
+  children.push(para(run("Entwicklung: vom Fotorealismus zum Hyperrealismus", { bold: true, color: ACC }), { before: 110, after: 50, keepNext: true }));
   const cw = [1900, Math.round((CONTENT_W - 1900) / 2), CONTENT_W - 1900 - Math.round((CONTENT_W - 1900) / 2)];
   const E = T.entwicklung;
   const headRow = new TableRow({ tableHeader: true, children: [
@@ -149,21 +157,22 @@ function build() {
     cell(para([run(E.cols[1].name, { bold: true }), run("  " + E.cols[1].zeit, { size: 15, color: MUTED })], { after: 0 }), cw[2], { fill: HYPER_BG }),
   ] });
   children.push(table(cw, [headRow, ...E.rows.map((r) => new TableRow({ children: [
-    cell(para(run(r[0], { bold: true, color: MUTED }), { after: 0 }), cw[0], { mt: 30, mb: 30 }),
-    cell(para(run(r[1]), { after: 0 }), cw[1], { mt: 30, mb: 30 }),
-    cell(para(run(r[2]), { after: 0 }), cw[2], { mt: 30, mb: 30 }),
+    cell(para(run(r[0], { bold: true, color: MUTED, size: 18 }), { after: 0 }), cw[0], { mt: 30, mb: 30 }),
+    cell(para(run(r[1], { size: 18 }), { after: 0 }), cw[1], { mt: 30, mb: 30 }),
+    cell(para(run(r[2], { size: 18 }), { after: 0 }), cw[2], { mt: 30, mb: 30 }),
   ] }))]));
+
+  // Abgrenzung (kompakt)
+  children.push(para(run("Abgrenzung", { bold: true, color: ACC }), { before: 110, after: 40, keepNext: true }));
+  children.push(...bullets(H.abgrenzung.map(([b, t]) => [run(b + ": ", { bold: true }), run(t)])));
 
   // ---------- 2 Merkmale ----------
   children.push(heading("2", "Zusammenfassende Merkmale"));
   children.push(...bullets(H.merkmale.map(([b, t]) => [run(b + ": ", { bold: true }), run(t)])));
-  children.push(para([run("Definition nach Louis K. Meisel (1980): ", { bold: true }), run(H.meisel)], { before: 70, after: 0 }));
+  children.push(para([run("Definition nach Louis K. Meisel (1972): ", { bold: true }), run(H.meisel)], { before: 70, after: 0 }));
 
-  // ---------- Seite 2 ----------
-  children.push(new Paragraph({ children: [new PageBreak()], spacing: { after: 0 } }));
-
-  // ---------- 3 Motive ----------
-  children.push(heading("3", "Motive"));
+  // ---------- 3 Motive (Seite 2) ----------
+  children.push(heading("3", "Motive", { pageBreakBefore: true }));
   const half = Math.ceil(H.motive.length / 2);
   const mw = [Math.round(CONTENT_W / 2), CONTENT_W - Math.round(CONTENT_W / 2)];
   children.push(table(mw, [new TableRow({ children: [
@@ -176,9 +185,9 @@ function build() {
   const VF = T.vertreterFoto.items, VH = T.vertreterHyper.items;
   const vw = [Math.round(CONTENT_W / 2) - 60, 120, CONTENT_W - (Math.round(CONTENT_W / 2) - 60) - 120];
   const vcell = (it, w, fill) => cell([
-    para([run(it.name, { bold: true }), run("  " + it.daten, { size: 15, color: MUTED })], { after: 0 }),
-    para(run(it.d, { size: 16, color: INK }), { after: 0 }),
-  ], w, { fill, mt: 30, mb: 30 });
+    para([run(it.name, { bold: true }), run("  " + it.daten, { size: 16, color: MUTED })], { after: 0 }),
+    para(run(it.d, { size: 18, color: INK }), { after: 0 }),
+  ], w, { fill, mt: 40, mb: 40 });
   const vrows = [new TableRow({ children: [
     cell(para(run("Fotorealismus", { bold: true }), { after: 0 }), vw[0], { fill: FOTO_BG }),
     cell(para(run(""), { after: 0 }), vw[1]),
@@ -196,16 +205,16 @@ function build() {
   // ---------- 5 Werkbeispiele ----------
   children.push(heading("5", "Werkbeispiele"));
   const ids = H.werke;
-  const gap = 200;
+  const gap = 340;
   const ww = Math.floor((CONTENT_W - gap * (ids.length - 1)) / ids.length);
   const wcells = [];
   ids.forEach((id, i) => {
     const k = W[id];
     wcells.push(cell([
-      ...artBlock(id, ww / 15 - 6, 150),
-      para([run(`Abb. ${i + 1}: `, { bold: true, color: ACC, size: 16 }), run(`${k.kuenstler}, `, { bold: true, size: 16 }), run(k.titel, { bold: true, italics: true, size: 16 }), run(`, ${k.jahr}`, { bold: true, size: 16 })], { after: 20 }),
-      para(run(`${k.technik}, ${k.masse}; ${k.sammlung}`, { size: 14, color: MUTED }), { after: 30 }),
-      para(run(H.werkText[id], { size: 16 }), { after: 0 }),
+      ...artBlock(id, ww / 15 - 6, 165),
+      para([run(`Abb. ${i + 1}: `, { bold: true, color: ACC, size: 18 }), run(`${k.kuenstler}, `, { bold: true, size: 18 }), run(k.titel, { bold: true, italics: true, size: 18 }), run(`, ${k.jahr}`, { bold: true, size: 18 })], { after: 20 }),
+      para(run(`${k.technik}, ${k.masse}; ${k.sammlung}`, { size: 15, color: MUTED }), { after: 40 }),
+      para(run(H.werkText[id], { size: 18 }), { after: 0 }),
     ], ww, { ml: 0, mr: 0 }));
     if (i < ids.length - 1) wcells.push(cell(para(run("")), gap, { ml: 0, mr: 0 }));
   });
@@ -213,16 +222,29 @@ function build() {
   ids.forEach((_, i) => { widths.push(ww); if (i < ids.length - 1) widths.push(gap); });
   children.push(table(widths, [new TableRow({ children: wcells })], NOB));
 
+  // ---------- Begriffe kurz erklärt ----------
+  const bw2 = [Math.round(CONTENT_W / 2), CONTENT_W - Math.round(CONTENT_W / 2)];
+  const bh2 = Math.ceil(H.begriffe.length / 2);
+  const bcell = (list, w, o) => cell([
+    ...list.map(([b, t]) => para([run(b + ": ", { bold: true, size: 17 }), run(t, { size: 17 })], { after: 20 })),
+  ], w, o);
+  children.push(para(run("Begriffe kurz erklärt", { bold: true, color: ACC }), { before: 80, after: 40, keepNext: true }));
+  children.push(table(bw2, [new TableRow({ children: [
+    bcell(H.begriffe.slice(0, bh2), bw2[0], { ml: 0 }),
+    bcell(H.begriffe.slice(bh2), bw2[1]),
+  ] })], NOB));
+  children.push(para(run(""), { after: 40, line: 120 }));
+
   // ---------- Diskussionsfrage ----------
   children.push(table([CONTENT_W], [new TableRow({ children: [cell([
     para([run("Zum Nachdenken: ", { bold: true, color: ACC }), run(T.fazit.frage, { bold: true })], { after: 30 }),
-    para(run(H.fazitText, { size: 16, color: MUTED }), { after: 0 }),
+    para(run(H.fazitText, { size: 17, color: MUTED }), { after: 0 }),
   ], CONTENT_W, { fill: ROW_BG, mt: 90, mb: 90, ml: 140, mr: 140 })] })], NOB));
 
   const doc = new Document({
     creator: "Referat Kunst",
     title: "Handout: Fotorealismus & Hyperrealismus",
-    styles: { default: { document: { run: { font: BODY, size: 18, color: INK } } } },
+    styles: { default: { document: { run: { font: BODY, size: 20, color: INK } } } },
     numbering: { config: [{ reference: "bullets", levels: [{ level: 0, format: LevelFormat.BULLET, text: "▪", alignment: AlignmentType.LEFT, style: { paragraph: { indent: { left: 260, hanging: 200 } }, run: { color: ACC } } }] }] },
     sections: [{
       properties: { page: { size: { width: PAGE_W, height: 16838 }, margin: { top: MARGIN, bottom: MARGIN, left: MARGIN, right: MARGIN } } },
